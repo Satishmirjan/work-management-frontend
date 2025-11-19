@@ -1,35 +1,160 @@
-import { NavLink } from 'react-router-dom';
+import { useState, useEffect } from "react"
+import { Link, useLocation } from "react-router-dom"
+import { motion, useScroll, useTransform } from "framer-motion"
+import { Menu, X, CheckSquare, BarChart3, Settings, PlusSquare } from "lucide-react"
 
-const navItems = [
-  { to: '/tasks/new', label: 'Add Task' },
-  { to: '/tasks', label: 'Task List' },
-  { to: '/analytics', label: 'Analytics' },
-  { to: '/manage', label: 'Manage Options' },
-];
+export default function Navbar() {
+  const location = useLocation()
+  const [isScrolled, setIsScrolled] = useState(false)
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const { scrollY } = useScroll()
 
-function Navbar() {
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 20)
+    window.addEventListener("scroll", onScroll)
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
+
+  const navItems = [
+    { path: "/tasks/new", label: "Add Task", icon: <PlusSquare className="w-4 h-4" /> },
+    { path: "/tasks", label: "Task List", icon: <CheckSquare className="w-4 h-4" /> },
+    { path: "/analytics", label: "Analytics", icon: <BarChart3 className="w-4 h-4" /> },
+    { path: "/manage", label: "Manage Options", icon: <Settings className="w-4 h-4" /> },
+  ]
+
   return (
-    <header className="app-navbar">
-      <div className="navbar-brand">
-        <span role="img" aria-label="check">
-          ✅
-        </span>
-        <span>Work Tracker</span>
-      </div>
-      <nav className="nav-links">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+    <>
+      {/* Header */}
+      <motion.header
+        className={`sticky top-0 z-50 border-b border-white/10 bg-gradient-to-r from-slate-950/90 via-indigo-900/40 to-slate-950/90 backdrop-blur-2xl transition-all duration-500 ${
+          isScrolled ? "shadow-[0_10px_50px_rgba(15,23,42,0.55)]" : ""
+        }`}
+        initial={{ y: -80, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6 }}
+      >
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 text-white">
+          {/* Logo */}
+          <Link to="/" className="group flex items-center gap-3">
+            <motion.div
+              className="relative rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 p-2 shadow-2xl"
+              whileHover={{ scale: 1.05, rotate: 3 }}
+              transition={{ duration: 0.3 }}
+            >
+              <motion.div
+                className="absolute inset-0 bg-blue-500/40 blur-xl rounded-xl opacity-0
+                group-hover:opacity-60"
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ repeat: Infinity, duration: 2 }}
+              />
+
+              <CheckSquare className="w-7 h-7 text-white relative z-10" />
+            </motion.div>
+
+            <div className="leading-tight">
+              <span className="bg-gradient-to-r from-blue-300 via-cyan-200 to-indigo-200 bg-clip-text text-xl font-bold text-transparent">
+                Work Tracker
+              </span>
+              <p className="text-xs tracking-wide text-slate-300">Manage • Analyze • Track</p>
+            </div>
+          </Link>
+
+          {/* Desktop Navbar */}
+          <nav className="hidden items-center gap-1 md:flex">
+            {navItems.map((item, i) => {
+              const active = location.pathname === item.path
+              return (
+                <motion.div
+                  key={item.path}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                >
+                  <Link to={item.path} className="group relative flex items-center gap-2 rounded-2xl px-4 py-2">
+                    <span
+                      className={`relative z-10 flex items-center gap-1 text-sm font-medium
+                      ${
+                        active
+                          ? "text-white"
+                          : "text-slate-300 group-hover:text-white"
+                      }`}
+                    >
+                      {item.icon} {item.label}
+                    </span>
+
+                    {active && (
+                      <motion.div
+                        layoutId="activeNav"
+                        className="absolute inset-0 rounded-2xl bg-indigo-500/30 blur-[1px]"
+                        transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                      />
+                    )}
+                  </Link>
+                </motion.div>
+              )
+            })}
+          </nav>
+
+          {/* Mobile Menu Button */}
+          <button
+            className="rounded-xl border border-white/20 p-2 text-white transition hover:bg-white/10 md:hidden"
+            onClick={() => setIsMobileOpen(true)}
           >
-            {item.label}
-          </NavLink>
-        ))}
-      </nav>
-    </header>
-  );
+            <Menu className="h-6 w-6" />
+          </button>
+        </div>
+
+        {/* Scroll Progress Bar */}
+        <motion.div
+          className="h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 origin-left"
+          style={{ scaleX: useTransform(scrollY, [0, 800], [0, 1]) }}
+        />
+      </motion.header>
+
+      {/* Mobile Sidebar */}
+      <motion.div
+        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: isMobileOpen ? 1 : 0 }}
+        style={{ pointerEvents: isMobileOpen ? "auto" : "none" }}
+        onClick={() => setIsMobileOpen(false)}
+      >
+        <motion.div
+          className="absolute right-0 top-0 h-full w-72 bg-white dark:bg-gray-900 shadow-xl p-6"
+          initial={{ x: "100%" }}
+          animate={{ x: isMobileOpen ? 0 : "100%" }}
+          transition={{ type: "spring", stiffness: 250, damping: 25 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="mb-8 flex items-center justify-between">
+            <h3 className="font-semibold text-lg">Menu</h3>
+            <button className="rounded-lg border border-white/20 p-2" onClick={() => setIsMobileOpen(false)}>
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {navItems.map((item) => {
+              const active = location.pathname === item.path
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setIsMobileOpen(false)}
+                  className={`flex items-center gap-3 rounded-xl p-3 ${
+                    active
+                      ? "bg-indigo-500/20 text-white"
+                      : "text-slate-200 hover:bg-white/10"
+                  }`}
+                >
+                  {item.icon}
+                  {item.label}
+                </Link>
+              )
+            })}
+          </div>
+        </motion.div>
+      </motion.div>
+    </>
+  )
 }
-
-export default Navbar;
-
