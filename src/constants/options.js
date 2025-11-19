@@ -1,8 +1,8 @@
 export const defaultProjects = [
   
   'Projects Casing durability',
-  'RFID',
-  'PID',
+  'RFID PID',
+ 
   'TREEL TT',
   'TREEL TL',
   'Accelerated testing',
@@ -11,7 +11,10 @@ export const defaultProjects = [
   'Mold',
   '9.00R20 field testing'
 ];
-export const defaultPeople = ['Alex Chen', 'Morgan Diaz', 'Priya Kapoor'];
+
+export const defaultPeople = ['Prajwal C', 'Satish', 'Keerthana'];
+
+
 export const defaultMilestones = [
   
   'Initiate NDR Review Process',
