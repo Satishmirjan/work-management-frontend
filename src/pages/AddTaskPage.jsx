@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import dayjs from 'dayjs';
 import {
   ArrowLeft,
   Calendar,
@@ -18,13 +19,14 @@ import {
   defaultMilestones,
   defaultActivities
 } from "../constants/options";
-import { createTask, fetchTaskOptions } from '../services/taskService';
+import { createTask, fetchTask, fetchTaskOptions, updateTask } from '../services/taskService';
+import { useAuth } from '../context/AuthContext';
 
-const today = new Date().toISOString().split('T')[0];
+const todayString = () => new Date().toISOString().split('T')[0];
 
-const initialForm = {
+const buildInitialForm = () => ({
   name: '',
-  workDate: today,
+  workDate: todayString(),
   person: '',
   project: '',
   milestone: 'None',
@@ -33,7 +35,7 @@ const initialForm = {
   plannedEnd: '',
   actualStart: '',
   actualEnd: '',
-};
+});
 
 // const defaultProjects = [
 //   'Projects Casing durability',
@@ -126,16 +128,20 @@ const buildOptions = (fallback = [], fetched = []) => {
 
 function AddTaskPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState(initialForm);
+  const { taskId } = useParams();
+  const { user } = useAuth();
+  const [form, setForm] = useState(buildInitialForm);
   const [saving, setSaving] = useState(false);
   const [alert, setAlert] = useState(null);
   const [mounted, setMounted] = useState(false);
+  const [loadingTask, setLoadingTask] = useState(false);
   const [options, setOptions] = useState({
     projects: defaultProjects,
     people: defaultPeople,
     milestones: defaultMilestones,
     genericActivities: defaultActivities,
   });
+  const isEditMode = Boolean(taskId);
 
   useEffect(() => {
     setMounted(true);
@@ -154,6 +160,55 @@ function AddTaskPage() {
     };
     loadOptions();
   }, []);
+
+  useEffect(() => {
+    if (!taskId) {
+      setForm(buildInitialForm());
+      return;
+    }
+
+    const loadTask = async () => {
+      setLoadingTask(true);
+      setAlert(null);
+      try {
+        const data = await fetchTask(taskId);
+
+        const ownerId =
+          typeof data.createdBy === 'string'
+            ? data.createdBy
+            : data.createdBy?._id || data.createdBy?.id;
+        const isOwner = ownerId && user ? ownerId === user.id : false;
+        const isAdmin = user?.role === 'admin';
+
+        if (!isOwner && !isAdmin) {
+          setAlert({ type: 'error', message: 'You can only edit tasks you created.' });
+          navigate('/tasks', { replace: true });
+          return;
+        }
+
+        setForm({
+          name: data.name || '',
+          workDate: data.workDate ? dayjs(data.workDate).format('YYYY-MM-DD') : todayString(),
+          person: data.person || '',
+          project: data.project || '',
+          milestone: data.milestone || 'None',
+          genericActivity: data.genericActivity || '',
+          plannedStart: data.plannedStart ? dayjs(data.plannedStart).format('YYYY-MM-DD') : '',
+          plannedEnd: data.plannedEnd ? dayjs(data.plannedEnd).format('YYYY-MM-DD') : '',
+          actualStart: data.actualStart ? dayjs(data.actualStart).format('YYYY-MM-DD') : '',
+          actualEnd: data.actualEnd ? dayjs(data.actualEnd).format('YYYY-MM-DD') : '',
+        });
+      } catch (error) {
+        console.error('Failed to load task', error);
+        const message = error?.response?.data?.message || 'Unable to load task details.';
+        setAlert({ type: 'error', message });
+      } finally {
+        setLoadingTask(false);
+      }
+    };
+
+    loadTask();
+  }, [taskId, user, navigate]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -174,16 +229,22 @@ function AddTaskPage() {
     setSaving(true);
 
     try {
-      await createTask(form);
-      setAlert({ type: 'success', message: 'Task saved successfully!' });
-      // Navigate back to task list after a short delay
+      if (isEditMode) {
+        await updateTask(taskId, form);
+        setAlert({ type: 'success', message: 'Task updated successfully!' });
+      } else {
+        await createTask(form);
+        setAlert({ type: 'success', message: 'Task saved successfully!' });
+      }
+
       setTimeout(() => {
         navigate('/tasks');
-      }, 1500);
+      }, 1200);
     } catch (error) {
       console.error('Failed to save task', error);
       const message = error?.response?.data?.message || error?.message || 'Could not save task. Please try again.';
       setAlert({ type: 'error', message });
+    } finally {
       setSaving(false);
     }
   };
@@ -229,7 +290,7 @@ function AddTaskPage() {
               </div>
             </div>
 
-            <h1 className="text-5xl font-bold text-white mb-3">Add Task / Activity</h1>
+            <h1 className="text-5xl font-bold text-white mb-3">{isEditMode ? 'Edit Task / Activity' : 'Add Task / Activity'}</h1>
             <p className="text-slate-300 text-lg max-w-3xl">
               Capture daily work, orchestrate schedules, and surface insights.
             </p>
@@ -244,6 +305,12 @@ function AddTaskPage() {
               : 'bg-red-500/20 border-red-500/40 text-red-200'
           }`}>
             {alert.message}
+          </div>
+        )}
+
+        {loadingTask && (
+          <div className="mb-6 p-5 rounded-2xl border-2 border-blue-500/40 bg-blue-500/10 text-blue-100 shadow-xl">
+            Loading task details...
           </div>
         )}
 
@@ -480,21 +547,21 @@ function AddTaskPage() {
         <div className="flex flex-col sm:flex-row gap-5 justify-end">
           <button
             className="px-10 py-4 bg-slate-800/80 border-2 border-slate-600 text-slate-300 font-bold rounded-2xl hover:bg-slate-700/80 hover:border-slate-500 flex items-center gap-3 shadow-xl"
-            onClick={() => setForm(initialForm)}
+            onClick={() => (isEditMode ? navigate('/tasks') : setForm(buildInitialForm()))}
           >
             <X className="w-6 h-6" />
             Cancel
           </button>
 
           <button
-            disabled={saving}
+            disabled={saving || loadingTask}
             onClick={handleSubmit}
             className={`px-10 py-4 text-white font-bold rounded-2xl flex items-center gap-3 shadow-2xl ${
               saving ? 'animate-pulse bg-violet-600/60' : 'bg-violet-600 hover:bg-violet-700'
             }`}
           >
             <Save className={`w-6 h-6 ${saving ? 'animate-spin' : ''}`} />
-            {saving ? 'Saving...' : 'Start logging work'}
+            {saving ? 'Saving...' : isEditMode ? 'Update Task' : 'Start logging work'}
           </button>
         </div>
       </div>

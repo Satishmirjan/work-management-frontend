@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react"
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { motion, useScroll, useTransform } from "framer-motion"
-import { Menu, X, CheckSquare, BarChart3, Settings, PlusSquare } from "lucide-react"
+import { Menu, X, CheckSquare, BarChart3, Settings, PlusSquare, LogOut, LogIn } from "lucide-react"
+import { useAuth } from "../context/AuthContext.jsx"
 
 export default function Navbar() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, logout } = useAuth()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const { scrollY } = useScroll()
@@ -16,11 +19,16 @@ export default function Navbar() {
   }, [])
 
   const navItems = [
-    { path: "/tasks/new", label: "Add Task", icon: <PlusSquare className="w-4 h-4" /> },
-    { path: "/tasks", label: "Task List", icon: <CheckSquare className="w-4 h-4" /> },
-    { path: "/analytics", label: "Analytics", icon: <BarChart3 className="w-4 h-4" /> },
-    { path: "/manage", label: "Manage Options", icon: <Settings className="w-4 h-4" /> },
+    { path: "/tasks/new", label: "Add Task", icon: <PlusSquare className="w-4 h-4" />, requiresAuth: true },
+    { path: "/tasks", label: "Task List", icon: <CheckSquare className="w-4 h-4" />, requiresAuth: true },
+    { path: "/analytics", label: "Analytics", icon: <BarChart3 className="w-4 h-4" />, requiresAuth: true },
+    { path: "/manage", label: "Manage Options", icon: <Settings className="w-4 h-4" />, requiresAuth: true, roles: ["admin"] },
   ]
+
+  const handleLogout = () => {
+    logout()
+    navigate("/login")
+  }
 
   return (
     <>
@@ -61,8 +69,16 @@ export default function Navbar() {
 
           {/* Desktop Navbar */}
           <nav className="hidden items-center gap-1 md:flex">
-            {navItems.map((item, i) => {
-              const active = location.pathname === item.path
+            {navItems
+              .filter((item) => {
+                if (item.roles && (!user || !item.roles.includes(user.role))) {
+                  return false
+                }
+                return true
+              })
+              .map((item, i) => {
+                const active = location.pathname === item.path
+                const destination = user || !item.requiresAuth ? item.path : "/login"
               return (
                 <motion.div
                   key={item.path}
@@ -70,7 +86,7 @@ export default function Navbar() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 }}
                 >
-                  <Link to={item.path} className="group relative flex items-center gap-2 rounded-2xl px-4 py-2">
+                  <Link to={destination} className="group relative flex items-center gap-2 rounded-2xl px-4 py-2">
                     <span
                       className={`relative z-10 flex items-center gap-1 text-sm font-medium
                       ${
@@ -93,6 +109,29 @@ export default function Navbar() {
                 </motion.div>
               )
             })}
+            <div className="ml-4 flex items-center gap-3">
+              {user ? (
+                <>
+                  <span className="text-sm text-slate-300 hidden lg:inline">{user.displayName}</span>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 rounded-2xl border border-white/20 px-4 py-2 text-sm text-white hover:bg-white/10"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <Link
+                  to="/login"
+                  className="flex items-center gap-2 rounded-2xl border border-indigo-500/70 px-4 py-2 text-sm text-white bg-indigo-600/70 hover:bg-indigo-600"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Sign in
+                </Link>
+              )}
+            </div>
           </nav>
 
           {/* Mobile Menu Button */}
@@ -134,12 +173,20 @@ export default function Navbar() {
           </div>
 
           <div className="space-y-3">
-            {navItems.map((item) => {
-              const active = location.pathname === item.path
+            {navItems
+              .filter((item) => {
+                if (item.roles && (!user || !item.roles.includes(user.role))) {
+                  return false
+                }
+                return true
+              })
+              .map((item) => {
+                const active = location.pathname === item.path
+                const destination = user || !item.requiresAuth ? item.path : "/login"
               return (
                 <Link
                   key={item.path}
-                  to={item.path}
+                  to={destination}
                   onClick={() => setIsMobileOpen(false)}
                   className={`flex items-center gap-3 rounded-xl p-3 ${
                     active
@@ -152,6 +199,31 @@ export default function Navbar() {
                 </Link>
               )
             })}
+          </div>
+
+          <div className="mt-6 border-t border-white/10 pt-4">
+            {user ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileOpen(false)
+                  handleLogout()
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 px-4 py-3 text-white"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                onClick={() => setIsMobileOpen(false)}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-indigo-500/70 bg-indigo-600/80 px-4 py-3 text-white"
+              >
+                <LogIn className="w-4 h-4" />
+                Sign in
+              </Link>
+            )}
           </div>
         </motion.div>
       </motion.div>
