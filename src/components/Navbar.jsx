@@ -49,19 +49,18 @@ export default function Navbar() {
               whileHover={{ scale: 1.05, rotate: 3 }}
               transition={{ duration: 0.3 }}
             >
-              <motion.div
-                className="absolute inset-0 bg-blue-500/40 blur-xl rounded-xl opacity-0
-                group-hover:opacity-60"
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ repeat: Infinity, duration: 2 }}
-              />
+             
 
-              <CheckSquare className="w-7 h-7 text-white relative z-10" />
             </motion.div>
-
+            <img
+    src=".\public\jk-favicon.jpg"
+    alt="Logo"
+    className="w-10 h-10 cursor-pointer"
+  />
             <div className="leading-tight">
               <span className="bg-gradient-to-r from-blue-300 via-cyan-200 to-indigo-200 bg-clip-text text-xl font-bold text-transparent">
-                Work Tracker
+               Daily Work Management : <br></br>
+               TBR Platform     
               </span>
               <p className="text-xs tracking-wide text-slate-300">Manage • Analyze • Track</p>
             </div>
