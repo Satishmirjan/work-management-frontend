@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Calendar,
@@ -11,6 +12,13 @@ import {
   X,
   Sparkles
 } from 'lucide-react';
+import {
+  defaultProjects,
+  defaultPeople,
+  defaultMilestones,
+  defaultActivities
+} from "../constants/options";
+import { createTask, fetchTaskOptions } from '../services/taskService';
 
 const today = new Date().toISOString().split('T')[0];
 
@@ -27,98 +35,124 @@ const initialForm = {
   actualEnd: '',
 };
 
-const defaultProjects = [
-  'Projects Casing durability',
-  'RFID PID',
-  'TREEL TT',
-  'TREEL TL',
-  'Accelerated testing',
-  'Training',
-  'Bald',
-  'Mold',
-  '9.00R20 field testing'
-];
+// const defaultProjects = [
+//   'Projects Casing durability',
+//   'RFID PID',
+//   'TREEL TT',
+//   'TREEL TL',
+//   'Accelerated testing',
+//   'Training',
+//   'Bald',
+//   'Mold',
+//   '9.00R20 field testing'
+// ];
 
-const defaultPeople = ['Prajwal C', 'Satish', 'Keerthana'];
+// const defaultPeople = ['Prajwal C', 'Satish', 'Keerthana'];
 
-const defaultMilestones = [
-  'None',
-  'Initiate NDR Review Process',
-  'Start Business case review & approval - Gate 1',
-  'Start Detailed design review - Gate 2 sign off',
-  'Start Proto sign off - Gate 3 sign off',
-  'Start FDR / PRN - Gate 4',
-  'Market feedback - Gate 5'
-];
+// const defaultMilestones = [
+//   'None',
+//   'Initiate NDR Review Process',
+//   'Start Business case review & approval - Gate 1',
+//   'Start Detailed design review - Gate 2 sign off',
+//   'Start Proto sign off - Gate 3 sign off',
+//   'Start FDR / PRN - Gate 4',
+//   'Market feedback - Gate 5'
+// ];
 
-const defaultActivities = [
-  'VOC - Market research',
-  'VOC - Historical Warranty & Quality Information.',
-  'VOC - Team experience',
-  'CFT formation',
-  'Customer inputs - CFT visit',
-  'Business Plan / Marketing Strategy.',
-  'Benchmark identification',
-  'Primary feasibility study',
-  'Business case preparation',
-  'Capex approval',
-  'Timing chart preparation & alignment- PQPTC',
-  'Preliminary product benchmarking',
-  'Build house of quality (QFD)',
-  'Concept preparation',
-  'Concept review & sign off',
-  'Project cover sheet & DVP input',
-  'Prepare DFMEA',
-  'Manufacturing Feasibility sign off input',
-  'Manufacturing Feasibility sign off from plant',
-  'Risk analysis',
-  'Feasibility & risk assessment review',
-  'Final RACE approval with WBS number',
-  'Preparation of basic design',
-  'Basic design review',
-  'Detailed design & simulation',
-  'Review of simulation results',
-  'Preparation of engineering drawings & sign off',
-  'Create PR',
-  'PR approval',
-  'Mold drawings to vendor',
-  'Vendor selection & PO release',
-  'Mold manufacturing',
-  'Mold inspection',
-  'Creation of product code',
-  'Design specification prep - proto run',
-  'Manufacturing specification prep',
-  'Building & curing prep - proto run',
-  'BOM / Routing',
-  'Costing',
-  'Product code extension',
-  'PFMEA preparation',
-  'Mold inspection & release',
-  'Proto run',
-  'DVP Plant',
-  'DVP Hasetri',
-  'Compilation of proto results',
-  'Review of proto results',
-  'Packaging specification',
-  'Sample submission',
-  'Pilot production',
-  'Review of pilot results',
-  'PTG test plan',
-  'Dispatch test tyres',
-  'Fitment test tyres',
-  'Field evaluations',
-  'Commercial production release',
-  'Capture Post release feedback'
-];
+// const defaultActivities = [
+//   'VOC - Market research',
+//   'VOC - Historical Warranty & Quality Information.',
+//   'VOC - Team experience',
+//   'CFT formation',
+//   'Customer inputs - CFT visit',
+//   'Business Plan / Marketing Strategy.',
+//   'Benchmark identification',
+//   'Primary feasibility study',
+//   'Business case preparation',
+//   'Capex approval',
+//   'Timing chart preparation & alignment- PQPTC',
+//   'Preliminary product benchmarking',
+//   'Build house of quality (QFD)',
+//   'Concept preparation',
+//   'Concept review & sign off',
+//   'Project cover sheet & DVP input',
+//   'Prepare DFMEA',
+//   'Manufacturing Feasibility sign off input',
+//   'Manufacturing Feasibility sign off from plant',
+//   'Risk analysis',
+//   'Feasibility & risk assessment review',
+//   'Final RACE approval with WBS number',
+//   'Preparation of basic design',
+//   'Basic design review',
+//   'Detailed design & simulation',
+//   'Review of simulation results',
+//   'Preparation of engineering drawings & sign off',
+//   'Create PR',
+//   'PR approval',
+//   'Mold drawings to vendor',
+//   'Vendor selection & PO release',
+//   'Mold manufacturing',
+//   'Mold inspection',
+//   'Creation of product code',
+//   'Design specification prep - proto run',
+//   'Manufacturing specification prep',
+//   'Building & curing prep - proto run',
+//   'BOM / Routing',
+//   'Costing',
+//   'Product code extension',
+//   'PFMEA preparation',
+//   'Mold inspection & release',
+//   'Proto run',
+//   'DVP Plant',
+//   'DVP Hasetri',
+//   'Compilation of proto results',
+//   'Review of proto results',
+//   'Packaging specification',
+//   'Sample submission',
+//   'Pilot production',
+//   'Review of pilot results',
+//   'PTG test plan',
+//   'Dispatch test tyres',
+//   'Fitment test tyres',
+//   'Field evaluations',
+//   'Commercial production release',
+//   'Capture Post release feedback'
+// ];
+
+const buildOptions = (fallback = [], fetched = []) => {
+  const merged = [...new Set([...fallback, ...(fetched ?? [])])].filter(Boolean);
+  return merged.length ? merged : fallback;
+};
 
 function AddTaskPage() {
+  const navigate = useNavigate();
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
   const [alert, setAlert] = useState(null);
   const [mounted, setMounted] = useState(false);
+  const [options, setOptions] = useState({
+    projects: defaultProjects,
+    people: defaultPeople,
+    milestones: defaultMilestones,
+    genericActivities: defaultActivities,
+  });
 
   useEffect(() => {
     setMounted(true);
+    const loadOptions = async () => {
+      try {
+        const data = await fetchTaskOptions();
+        setOptions({
+          projects: buildOptions(defaultProjects, data.projects),
+          people: buildOptions(defaultPeople, data.people),
+          milestones: buildOptions(defaultMilestones, data.milestones),
+          genericActivities: buildOptions(defaultActivities, data.genericActivities),
+        });
+      } catch (err) {
+        console.error('Failed to load options', err);
+      }
+    };
+    loadOptions();
   }, []);
 
   const handleChange = (event) => {
@@ -129,14 +163,29 @@ function AddTaskPage() {
     }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    // Validate required fields
+    if (!form.name || !form.person || !form.project || !form.genericActivity || !form.workDate) {
+      setAlert({ type: 'error', message: 'Please fill in all required fields (Task Name, Person, Project, Generic Activity, and Date).' });
+      return;
+    }
+
     setAlert(null);
     setSaving(true);
 
-    setTimeout(() => {
+    try {
+      await createTask(form);
       setAlert({ type: 'success', message: 'Task saved successfully!' });
+      // Navigate back to task list after a short delay
+      setTimeout(() => {
+        navigate('/tasks');
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to save task', error);
+      const message = error?.response?.data?.message || error?.message || 'Could not save task. Please try again.';
+      setAlert({ type: 'error', message });
       setSaving(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -164,7 +213,10 @@ function AddTaskPage() {
 
         {/* Header */}
         <div className={`mb-8 ${mounted ? 'animate-slide-down' : 'opacity-0'}`}>
-          <button className="flex items-center gap-2 text-slate-400 hover:text-violet-400 mb-6 transition-all duration-300 group">
+          <button 
+            onClick={() => navigate('/tasks')}
+            className="flex items-center gap-2 text-slate-400 hover:text-violet-400 mb-6 transition-all duration-300 group"
+          >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-2 transition-transform duration-300" />
             <span className="font-medium">Back to Tasks</span>
           </button>
@@ -186,7 +238,11 @@ function AddTaskPage() {
 
         {/* Alert */}
         {alert && (
-          <div className="mb-6 p-5 rounded-2xl bg-green-500/20 border-2 border-green-500/40 text-green-200 shadow-xl">
+          <div className={`mb-6 p-5 rounded-2xl border-2 shadow-xl ${
+            alert.type === 'success' 
+              ? 'bg-green-500/20 border-green-500/40 text-green-200' 
+              : 'bg-red-500/20 border-red-500/40 text-red-200'
+          }`}>
             {alert.message}
           </div>
         )}
@@ -262,7 +318,7 @@ function AddTaskPage() {
                 />
 
                 <datalist id="people-options">
-                  {defaultPeople.map(p => <option key={p} value={p} />)}
+                  {options.people.map(p => <option key={p} value={p} />)}
                 </datalist>
               </div>
             </div>
@@ -282,7 +338,7 @@ function AddTaskPage() {
                   className="input-field w-full pl-16 pr-5 py-4 border-2 border-slate-700 bg-slate-800/50 rounded-2xl text-white cursor-pointer"
                 >
                   <option value="" disabled>Select a project</option>
-                  {defaultProjects.map(p => (
+                  {options.projects.map(p => (
                     <option key={p} value={p} className="bg-slate-900">{p}</option>
                   ))}
                 </select>
@@ -303,7 +359,7 @@ function AddTaskPage() {
                   onChange={handleChange}
                   className="input-field w-full pl-16 pr-5 py-4 border-2 border-slate-700 bg-slate-800/50 rounded-2xl text-white cursor-pointer"
                 >
-                  {defaultMilestones.map(m => (
+                  {options.milestones.map(m => (
                     <option key={m} value={m} className="bg-slate-900">{m}</option>
                   ))}
                 </select>
@@ -325,7 +381,7 @@ function AddTaskPage() {
                   className="input-field w-full pl-16 pr-5 py-4 border-2 border-slate-700 bg-slate-800/50 rounded-2xl text-white cursor-pointer"
                 >
                   <option value="" disabled>Select activity type</option>
-                  {defaultActivities.map(a => (
+                  {options.genericActivities.map(a => (
                     <option key={a} value={a} className="bg-slate-900">{a}</option>
                   ))}
                 </select>
