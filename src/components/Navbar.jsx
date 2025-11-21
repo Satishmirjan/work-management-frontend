@@ -53,7 +53,7 @@ export default function Navbar() {
 
             </motion.div>
             <img
-    src=".\public\jk-favicon.jpg"
+    src="./jk-favicon.jpg"
     alt="Logo"
     className="w-10 h-10 cursor-pointer"
   />
