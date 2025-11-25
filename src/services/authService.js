@@ -5,4 +5,10 @@ export const login = async (payload) => {
   return data;
 };
 
+export const changePassword = async (payload) => {
+  const { data } = await apiClient.put('/users/change-password', payload);
+  return data;
+};
+
+
 
