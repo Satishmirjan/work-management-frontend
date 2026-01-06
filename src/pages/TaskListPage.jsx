@@ -28,6 +28,78 @@ const buildOptions = (fallback = [], fetched = []) => {
 
 const formatDate = (value) => (value ? dayjs(value).format('DD MMM YYYY') : '—');
 
+const getTaskStatus = (task) => {
+  if (task.actualEnd) {
+    return 'Completed';
+  }
+  if (task.actualStart) {
+    return 'In Progress';
+  }
+  return 'Yet to Start';
+};
+
+const getStatusStyle = (status) => {
+  const baseStyle = {
+    padding: '4px 12px',
+    borderRadius: '12px',
+    fontSize: '0.875rem',
+    fontWeight: '500',
+    display: 'inline-block',
+  };
+
+  switch (status) {
+    case 'Completed':
+      return { ...baseStyle, backgroundColor: '#dcfce7', color: '#166534' };
+    case 'In Progress':
+      return { ...baseStyle, backgroundColor: '#dbeafe', color: '#1e40af' };
+    case 'Yet to Start':
+      return { ...baseStyle, backgroundColor: '#f3f4f6', color: '#4b5563' };
+    default:
+      return baseStyle;
+  }
+};
+
+const calculateSlippage = (task) => {
+  // Only calculate slippage if task is completed and has both planned and actual end dates
+  if (!task.actualEnd || !task.plannedEnd) {
+    return '—';
+  }
+
+  const plannedEnd = dayjs(task.plannedEnd);
+  const actualEnd = dayjs(task.actualEnd);
+  const diffDays = actualEnd.diff(plannedEnd, 'day');
+
+  if (diffDays === 0) {
+    return 'On Time';
+  } else if (diffDays > 0) {
+    return `+${diffDays} day${diffDays > 1 ? 's' : ''}`;
+  } else {
+    return `${diffDays} day${diffDays < -1 ? 's' : ''}`;
+  }
+};
+
+const getSlippageStyle = (slippage) => {
+  const baseStyle = {
+    padding: '4px 12px',
+    borderRadius: '12px',
+    fontSize: '0.875rem',
+    fontWeight: '500',
+    display: 'inline-block',
+  };
+
+  if (slippage === '—') {
+    return { ...baseStyle, backgroundColor: '#f3f4f6', color: '#6b7280' };
+  }
+  if (slippage === 'On Time') {
+    return { ...baseStyle, backgroundColor: '#dcfce7', color: '#166534' };
+  }
+  if (slippage.startsWith('+')) {
+    return { ...baseStyle, backgroundColor: '#fee2e2', color: '#991b1b' };
+  }
+  // Early completion (negative days)
+  return { ...baseStyle, backgroundColor: '#dbeafe', color: '#1e40af' };
+};
+
 function TaskListPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -162,11 +234,15 @@ function TaskListPage() {
               <th>Project</th>
               <th>Milestone</th>
               <th>Generic Activity</th>
+
+
               <th>Today&apos;s Date</th>
               <th>Planned Start</th>
               <th>Planned End</th>
               <th>Actual Start</th>
               <th>Actual End</th>
+              <th>Status</th>
+              <th>Schedule Slippage</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -177,6 +253,8 @@ function TaskListPage() {
                 task.createdByName ||
                 '—';
               const allowManage = canModifyTask(task);
+              const status = getTaskStatus(task);
+              const slippage = calculateSlippage(task);
               return (
                 <tr key={task._id}>
                   <td>{task.name}</td>
@@ -185,11 +263,18 @@ function TaskListPage() {
                   <td>{task.project}</td>
                   <td>{task.milestone || 'None'}</td>
                   <td>{task.genericActivity}</td>
+
                   <td>{formatDate(task.workDate)}</td>
                   <td>{formatDate(task.plannedStart)}</td>
                   <td>{formatDate(task.plannedEnd)}</td>
                   <td>{formatDate(task.actualStart)}</td>
                   <td>{formatDate(task.actualEnd)}</td>
+                  <td>
+                    <span style={getStatusStyle(status)}>{status}</span>
+                  </td>
+                  <td>
+                    <span style={getSlippageStyle(slippage)}>{slippage}</span>
+                  </td>
                   <td>
                     <div className="action-buttons">
                       <button
@@ -295,5 +380,3 @@ function TaskListPage() {
 }
 
 export default TaskListPage;
-
-

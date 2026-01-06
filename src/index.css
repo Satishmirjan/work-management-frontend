@@ -117,10 +117,12 @@ button {
   color: var(--navy);
 }
 
+
 .app-main {
   position: relative;
   z-index: 1;
-  max-width: 1200px;
+  max-width: 100%;
+  /* Changed from 1200px */
   margin: 0 auto;
   padding: 3rem 1.5rem 4rem;
 }
@@ -348,13 +350,21 @@ button {
   transform: translateY(-1px);
   border-color: rgba(248, 113, 113, 0.5);
 }
+
 .fade-in {
   animation: fadeIn .6s ease-in-out;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .page-card,
@@ -372,7 +382,7 @@ button {
 
 .stat-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
 .stats-grid {
